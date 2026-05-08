@@ -27,8 +27,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Eventos Iglesia',
-        short_name: 'Eventos',
+        name: 'Eventos Escuela de Adoradores',
+        short_name: 'EDA',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',

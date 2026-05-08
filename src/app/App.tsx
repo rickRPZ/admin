@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
 import { LoginScreen } from './components/LoginScreen';
-import { Navigation } from './components/Navigation';
+/* import { Navigation } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
 import { Registros } from './components/Registros';
 import { CheckIn } from './components/CheckIn';
@@ -10,7 +10,7 @@ import { Pagos } from './components/Pagos';
 import { Mercancia } from './components/Mercancia';
 import { Reportes } from './components/Reportes';
 import { Configuracion } from './components/Configuracion';
-import { TicketPage } from './components/TicketPage';
+import { TicketPage } from './components/TicketPage'; */
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -37,21 +37,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/ticket/:qrCode" element={<TicketPage />} />
       <Route
         path="*"
         element={
           <div className="min-h-screen bg-gray-50">
-            <Navigation />
             <div className="md:pl-20">
               <Routes>
-                <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-                <Route path="/registros" element={<PrivateRoute><Registros /></PrivateRoute>} />
-                <Route path="/checkin" element={<PrivateRoute><CheckIn /></PrivateRoute>} />
-                <Route path="/pagos" element={<PrivateRoute><Pagos /></PrivateRoute>} />
-                <Route path="/mercancia" element={<PrivateRoute><Mercancia /></PrivateRoute>} />
-                <Route path="/reportes" element={<PrivateRoute><Reportes /></PrivateRoute>} />
-                <Route path="/configuracion" element={<PrivateRoute><Configuracion /></PrivateRoute>} />
                 <Route path="/" element={<Navigate to="/dashboard" />} />
                 <Route path="/login" element={<Navigate to="/dashboard" />} />
               </Routes>

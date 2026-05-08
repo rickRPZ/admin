@@ -1,6 +1,4 @@
-import { projectId, publicAnonKey } from '/utils/supabase/info';
-
-const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-20ba56b2`;
+import { projectId, publicAnonKey , API_URL} from '/utils/supabase/info';
 
 let accessToken: string | null = null;
 

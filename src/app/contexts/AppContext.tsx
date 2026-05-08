@@ -9,10 +9,10 @@ export interface Attendee {
   email: string;
   eventId: string;
   eventName?: string;
-  ticketType: 'general' | 'vip' | 'estudiante';
+  ticketType: 'general' | 'descuento mayo' | 'estudiante';
   workshops: string[];
   paymentStatus: 'pagado' | 'pendiente';
-  paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia';
+  paymentMethod: 'efectivo' | 'transferencia';
   paymentEvidence?: string;
   church: string;
   notes?: string;
@@ -42,7 +42,7 @@ export interface Sale {
   id: string;
   items: { productId: string; quantity: number; price: number }[];
   total: number;
-  paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia';
+  paymentMethod: 'efectivo' | 'transferencia';
   timestamp: string;
 }
 
