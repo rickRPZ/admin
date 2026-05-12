@@ -4,7 +4,7 @@ import { LogIn, AlertCircle } from 'lucide-react';
 import { CreateFirstUser } from './CreateFirstUser';
 
 export function LoginScreen() {
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
