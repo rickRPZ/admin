@@ -9,7 +9,7 @@ export interface Attendee {
   email: string;
   eventId: string;
   eventName?: string;
-  ticketType: 'general' | 'descuento mayo' | 'estudiante';
+  ticketType: 'general' | 'descuento mayo' | 'descuento junio';
   workshops: string[];
   paymentStatus: 'pagado' | 'pendiente';
   paymentMethod: 'efectivo' | 'transferencia';
@@ -48,7 +48,7 @@ export interface Sale {
 
 interface AppContextType {
   attendees: Attendee[];
-  addAttendee: (attendee: Omit<Attendee, 'id' | 'qrCode' | 'createdAt'>, evidenceFile?: File) => Promise<Attendee>;
+  addAttendee: (attendee: Omit<Attendee, 'id' | 'qrCode' | 'createdAt'>) => Promise<Attendee>;
   updateAttendee: (id: string, updates: Partial<Attendee>) => Promise<void>;
   checkIn: (qrCode: string) => Promise<boolean>;
   products: Product[];
@@ -102,9 +102,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated]);
 
-  const addAttendee = async (attendeeData: Omit<Attendee, 'id' | 'qrCode' | 'createdAt'>, evidenceFile?: File) => {
+  const addAttendee = async (attendeeData: Omit<Attendee, 'id' | 'qrCode' | 'createdAt'>) => {
     try {
-      const { attendee } = await attendeesAPI.create(attendeeData, evidenceFile);
+      const { attendee } = await attendeesAPI.create(attendeeData);
       setAttendees(prev => [...prev, attendee]);
       return attendee;
     } catch (error) {

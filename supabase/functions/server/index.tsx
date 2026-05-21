@@ -6,8 +6,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 
 // ============= ADMIN APP STORE ENDPOINTS =============
 const FUNCTION_URI = "/admin_api";
-const HEALTH_URI = FUNCTION_URI+"/health";
-const SIGNUP_URI = FUNCTION_URI+"/auth/signup";
+const HEALTH_URI = FUNCTION_URI + "/health";
+const SIGNUP_URI = FUNCTION_URI + "/auth/signup";
+const ATTENDEES_URI = FUNCTION_URI + "/attendees";
 
 const app = new Hono();
 
@@ -25,6 +26,11 @@ app.use(
     maxAge: 600,
   }),
 );
+
+// Health check endpoint
+app.get(HEALTH_URI, (c) => {
+  return c.json({ status: "ok" });
+});
 
 // Auth middleware
 const requireAuth = async (c: any, next: any) => {
@@ -46,11 +52,6 @@ const requireAuth = async (c: any, next: any) => {
   c.set('user', user);
   await next();
 };
-
-// Health check endpoint
-app.get(HEALTH_URI, (c) => {
-  return c.json({ status: "ok" });
-});
 
 // ============= AUTH ROUTES =============
 
@@ -79,6 +80,149 @@ app.post(SIGNUP_URI, async (c) => {
   } catch (error) {
     console.log('Signup exception:', error);
     return c.json({ error: 'Error creating user: ' + error.message }, 500);
+  }
+});
+
+// Attendees list endpoint
+app.get(ATTENDEES_URI, requireAuth, async (c) => {
+  try {
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const { data, error } = await serviceSupabase
+      .from('attendees')
+      .select('*');
+
+    if (error) {
+      console.log('Fetch attendees error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+
+    return c.json({ attendees: data || [] });
+  } catch (error: any) {
+    console.log('Attendees fetch exception:', error);
+    return c.json({ error: 'Error fetching attendees: ' + error.message }, 500);
+  }
+});
+
+// Attendees create endpoint: guarda en la tabla `public.attendees`
+// y asigna `registryUser` desde el token de sesión.
+app.post(ATTENDEES_URI, requireAuth, async (c) => {
+  try {
+    const body = await c.req.json();
+    const user = c.get('user');
+
+    const registryUser = user.email || user.id;
+
+    const record = {
+      fullname: body.fullname ?? null,
+      phone: body.phone ?? null,
+      email: body.email ?? null,
+      church: body.church ?? null,
+      eventId: body.eventId ?? null,
+      ticketType: body.ticketType ?? null,
+      paymentStatus: body.paymentStatus ?? null,
+      paymentMethod: body.paymentMethod ?? null,
+      registryUser,
+    };
+
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const { data, error } = await serviceSupabase
+      .from('attendees')
+      .insert([record])
+      .select();
+
+    if (error) {
+      console.log('Insert attendee error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+
+    return c.json({ attendee: data?.[0] ?? null });
+  } catch (error: any) {
+    console.log('Attendee create exception:', error);
+    return c.json({ error: 'Error creating attendee: ' + error.message }, 500);
+  }
+});
+
+// Attendees update endpoint: sólo workshops y checkedIn.
+app.put(`${ATTENDEES_URI}/:id`, requireAuth, async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+
+    const updates: any = {};
+    if (body.workshops !== undefined) {
+      updates.workshops = typeof body.workshops === 'string'
+        ? JSON.parse(body.workshops)
+        : body.workshops;
+    }
+    if (body.checkedIn !== undefined) {
+      updates.checkedIn = body.checkedIn;
+    }
+
+    if (!Object.keys(updates).length) {
+      return c.json({ error: 'No valid fields to update' }, 400);
+    }
+
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const { data, error } = await serviceSupabase
+      .from('attendees')
+      .update(updates)
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.log('Update attendee error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+
+    return c.json({ attendee: data?.[0] ?? null });
+  } catch (error: any) {
+    console.log('Attendee update exception:', error);
+    return c.json({ error: 'Error updating attendee: ' + error.message }, 500);
+  }
+});
+
+// Attendees qrCode update endpoint.
+app.put(`${ATTENDEES_URI}/:id/qrcode`, requireAuth, async (c) => {
+  try {
+    const id = c.req.param('id');
+    const { qrCode } = await c.req.json();
+
+    if (!qrCode) {
+      return c.json({ error: 'qrCode is required' }, 400);
+    }
+
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const { data, error } = await serviceSupabase
+      .from('attendees')
+      .update({ qrCode })
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.log('Update attendee qrCode error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+
+    return c.json({ attendee: data?.[0] ?? null });
+  } catch (error: any) {
+    console.log('Attendee qrCode update exception:', error);
+    return c.json({ error: 'Error updating attendee qrCode: ' + error.message }, 500);
   }
 });
 

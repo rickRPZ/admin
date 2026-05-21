@@ -2,10 +2,6 @@ import { useState } from 'react';
 import {
   LayoutDashboard,
   UserPlus,
-  ScanQrCode,
-  Wallet,
-  Store,
-  ChartBar,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -36,42 +32,7 @@ export function Navigation() {
       label: 'Registrar Asistentes',
       shortLabel: 'Registros',
       roles: ['admin', 'registros']
-    },
-    {
-      path: '/checkin',
-      icon: ScanQrCode,
-      label: 'Check-in de Entrada',
-      shortLabel: 'Check-in',
-      roles: ['admin', 'registros']
-    },
-    {
-      path: '/pagos',
-      icon: Wallet,
-      label: 'Procesar Pagos',
-      shortLabel: 'Pagos',
-      roles: ['admin', 'caja']
-    },
-    {
-      path: '/mercancia',
-      icon: Store,
-      label: 'Venta de Mercancía',
-      shortLabel: 'Mercancía',
-      roles: ['admin', 'caja']
-    },
-    {
-      path: '/reportes',
-      icon: ChartBar,
-      label: 'Reportes y Análisis',
-      shortLabel: 'Reportes',
-      roles: ['admin']
-    },
-    {
-      path: '/configuracion',
-      icon: Settings,
-      label: 'Configuración',
-      shortLabel: 'Config',
-      roles: ['admin', 'registros', 'caja']
-    },
+    }
   ];
 
   const filteredItems = navItems.filter(item => user && item.roles.includes(user.role));
@@ -110,8 +71,8 @@ export function Navigation() {
               {isExpanded ? (
                 <>
                   <div>
-                    <h2 className="font-bold text-lg text-gray-900">Sistema</h2>
-                    <p className="text-xs text-gray-500">Eventos</p>
+                    <h2 className="font-bold text-lg text-gray-900">Adoradores</h2>
+                    <p className="text-xs text-gray-500">EDA</p>
                   </div>
                   <ChevronLeft className="w-5 h-5 text-gray-400" />
                 </>
@@ -210,7 +171,7 @@ export function Navigation() {
         <div className="flex flex-col h-full py-4">
           {/* Header */}
           <div className="px-4 mb-6 pt-12">
-            <h2 className="font-bold text-xl text-gray-900">Sistema de Eventos</h2>
+            <h2 className="font-bold text-xl text-gray-900">Adoradores - EDA</h2>
             {user && (
               <div className="flex items-center gap-3 mt-4 p-3 bg-gray-50 rounded-lg">
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">

@@ -40,44 +40,17 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 // Attendees API
 export const attendeesAPI = {
   getAll: () => fetchAPI('/attendees'),
-  create: async (data: any, evidenceFile?: File) => {
-    let paymentEvidence = data.paymentEvidence;
-
-    // Upload evidence file if provided
-    if (evidenceFile) {
-      const formData = new FormData();
-      formData.append('file', evidenceFile);
-      formData.append('attendeeId', 'temp-' + Date.now());
-
-      const headers: Record<string, string> = {};
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      } else {
-        headers['Authorization'] = `Bearer ${publicAnonKey}`;
-      }
-
-      const response = await fetch(`${API_BASE}/upload-payment-evidence`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Error uploading evidence file');
-      }
-
-      const { signedUrl } = await response.json();
-      paymentEvidence = signedUrl;
-    }
-
-    return fetchAPI('/attendees', {
-      method: 'POST',
-      body: JSON.stringify({ ...data, paymentEvidence }),
-    });
-  },
+  create: (data: any) => fetchAPI('/attendees', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
   update: (id: string, data: any) => fetchAPI(`/attendees/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
+  }),
+  updateQrCode: (id: string, qrCode: string) => fetchAPI(`/attendees/${id}/qr-code`, {
+    method: 'PUT',
+    body: JSON.stringify({ qrCode }),
   }),
   checkIn: (qrCode: string) => fetchAPI('/checkin', {
     method: 'POST',

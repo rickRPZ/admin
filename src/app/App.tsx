@@ -4,8 +4,8 @@ import { AppProvider } from './contexts/AppContext';
 import { LoginScreen } from './components/LoginScreen';
 import { Navigation } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
-/*import { Registros } from './components/Registros';
-import { CheckIn } from './components/CheckIn';
+import { Registros } from './components/Registros';
+/*import { CheckIn } from './components/CheckIn';
 import { Pagos } from './components/Pagos';
 import { Mercancia } from './components/Mercancia';
 import { Reportes } from './components/Reportes';
@@ -44,6 +44,7 @@ function AppRoutes() {
             <Navigation />
             <div className="pb-16 md:pb-0 md:pl-20">
               <Routes>
+                <Route path="/registros" element={<PrivateRoute><Registros /></PrivateRoute>} />
                 <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                 <Route path="/" element={<Navigate to="/dashboard" />} />
                 <Route path="/login" element={<Navigate to="/dashboard" />} />
