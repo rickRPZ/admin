@@ -30,9 +30,8 @@ export function Registros() {
     try {
       const newAttendee = await addAttendee(formData);
       setShowForm(false);
-      setShowTicket(newAttendee.id);
       setFormData({
-        fullName: '',
+        fullname: '',
         phone: '',
         email: '',
         church: '',
@@ -61,10 +60,11 @@ export function Registros() {
       'Estado de Pago': attendee.paymentStatus === 'pagado' ? 'PAGADO' : 'PENDIENTE',
       'Método de Pago': attendee.paymentMethod.charAt(0).toUpperCase() + attendee.paymentMethod.slice(1),
       'Check-in': attendee.checkedIn ? 'SÍ' : 'NO',
-      'Fecha Check-in': attendee.checkedInAt ? new Date(attendee.checkedInAt).toLocaleString('es-MX') : '',
-      'Talleres': attendee.workshops.join(', '),
-      'Código QR': attendee.qrCode,
-      'Fecha de Registro': new Date(attendee.createdAt).toLocaleString('es-MX'),
+      'Talleres': Array.isArray(attendee.workshops) && attendee.workshops.length > 0
+        ? attendee.workshops.join(', ')
+        : '',
+      'Fecha de Registro': attendee.createdAt,
+      'Usuario Registro': attendee.registryUser || '',
       'Notas': attendee.notes || '',
     }));
 
