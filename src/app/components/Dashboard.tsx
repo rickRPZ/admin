@@ -3,28 +3,13 @@ import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Dashboard() {
-  const { attendees, sales, products, workshops } = useApp();
+  const { attendees } = useApp();
   const { user } = useAuth();
 
   const totalRegistered = attendees.length;
   const checkedIn = attendees.filter(a => a.checkedIn).length;
   const paidAttendees = attendees.filter(a => a.paymentStatus === 'pagado').length;
   const pendingPayments = attendees.filter(a => a.paymentStatus === 'pendiente').length;
-
-  const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0);
-  const totalRevenue = totalSales + (paidAttendees * 500);
-  const productsSold = sales.reduce((sum, sale) =>
-    sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
-  );
-
-  const workshopCounts = attendees.reduce((acc, attendee) => {
-    attendee.workshops.forEach(workshop => {
-      acc[workshop] = (acc[workshop] || 0) + 1;
-    });
-    return acc;
-  }, {} as Record<string, number>);
-
-  const topWorkshop = Object.entries(workshopCounts).sort((a, b) => b[1] - a[1])[0];
 
   const stats = [
     {
@@ -42,32 +27,11 @@ export function Dashboard() {
       textColor: 'text-green-600',
     },
     {
-      label: 'Ingresos Totales',
-      value: `$${totalRevenue.toLocaleString()}`,
-      icon: DollarSign,
-      color: 'bg-emerald-500',
-      textColor: 'text-emerald-600',
-    },
-    {
       label: 'Pagos Pendientes',
       value: pendingPayments,
       icon: Clock,
       color: 'bg-orange-500',
       textColor: 'text-orange-600',
-    },
-    {
-      label: 'Productos Vendidos',
-      value: productsSold,
-      icon: ShoppingCart,
-      color: 'bg-purple-500',
-      textColor: 'text-purple-600',
-    },
-    {
-      label: 'Ventas del Día',
-      value: `$${totalSales.toLocaleString()}`,
-      icon: TrendingUp,
-      color: 'bg-pink-500',
-      textColor: 'text-pink-600',
     },
   ];
 
@@ -94,14 +58,6 @@ export function Dashboard() {
           );
         })}
       </div>
-
-      {topWorkshop && (
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white mb-6">
-          <h3 className="text-lg font-semibold mb-2">Taller Más Popular</h3>
-          <p className="text-3xl font-bold">{topWorkshop[0]}</p>
-          <p className="text-blue-100 mt-1">{topWorkshop[1]} asistentes registrados</p>
-        </div>
-      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">

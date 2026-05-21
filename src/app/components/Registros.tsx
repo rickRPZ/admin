@@ -5,7 +5,7 @@ import { TicketView } from './TicketView';
 import * as XLSX from 'xlsx';
 
 export function Registros() {
-  const { attendees, addAttendee, events } = useApp();
+  const { attendees, addAttendee } = useApp();
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact');
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,7 +13,7 @@ export function Registros() {
   const [showTicket, setShowTicket] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    fullName: '',
+    fullname: '',
     phone: '',
     email: '',
     church: '',
@@ -48,17 +48,11 @@ export function Registros() {
     }
   };
 
-  const filteredAttendees = attendees.filter(a =>
-    a.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.phone.includes(searchTerm)
-  );
-
   const exportToExcel = () => {
     // Prepare data for export
     const dataToExport = attendees.map((attendee, index) => ({
       'No.': index + 1,
-      'Nombre Completo': attendee.fullName,
+      'Nombre Completo': attendee.fullname,
       'Email': attendee.email,
       'Teléfono': attendee.phone,
       'Iglesia': attendee.church,
@@ -127,8 +121,8 @@ export function Registros() {
             </label>
             <input
               type="text"
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              value={formData.fullname}
+              onChange={(e) => setFormData({ ...formData, fullname: e.target.value })}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -299,30 +293,17 @@ export function Registros() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por nombre, email o teléfono..."
-            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
       {/* Compact View */}
       {viewMode === 'compact' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredAttendees.map(attendee => (
+          {attendees.map(attendee => (
             <div
               key={attendee.id}
               onClick={() => setShowTicket(attendee.id)}
               className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-gray-900 text-sm line-clamp-1">{attendee.fullName}</h3>
+                <h3 className="font-semibold text-gray-900 text-sm line-clamp-1">{attendee.fullname}</h3>
                 <span className={`ml-2 w-2 h-2 rounded-full flex-shrink-0 mt-1 ${
                   attendee.paymentStatus === 'pagado' ? 'bg-green-500' : 'bg-orange-500'
                 }`} />
@@ -344,14 +325,14 @@ export function Registros() {
       ) : (
         /* Detailed View */
         <div className="space-y-3">
-          {filteredAttendees.map(attendee => (
+          {attendees.map(attendee => (
             <div
               key={attendee.id}
               className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{attendee.fullName}</h3>
+                  <h3 className="font-semibold text-gray-900">{attendee.fullname}</h3>
                   <p className="text-sm text-gray-600 mt-1">{attendee.email}</p>
                   <p className="text-sm text-gray-600">{attendee.phone}</p>
                   <div className="flex flex-wrap gap-2 mt-2">
@@ -386,12 +367,6 @@ export function Registros() {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {filteredAttendees.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          {searchTerm ? 'No se encontraron resultados' : 'No hay registros aún'}
         </div>
       )}
 

@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 
 export interface Attendee {
   id: string;
-  fullName: string;
+  fullname: string;
   phone: string;
   email: string;
   eventId: string;
@@ -65,10 +65,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [workshops, setWorkshops] = useState<string[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
 
   const refreshData = async () => {
@@ -76,19 +72,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       setLoading(true);
-      const [attendeesData, salesData, productsData, workshopsData, eventsData] = await Promise.all([
+      const [attendeesData] = await Promise.all([
         attendeesAPI.getAll(),
-        salesAPI.getAll(),
-        productsAPI.getAll(),
-        workshopsAPI.getAll(),
-        eventsAPI.getAll(),
       ]);
 
       setAttendees(attendeesData.attendees || []);
-      setSales(salesData.sales || []);
-      setProducts(productsData.products || []);
-      setWorkshops(workshopsData.workshops || []);
-      setEvents(eventsData.events || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -140,16 +128,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addSale = async (saleData: Omit<Sale, 'id' | 'timestamp'>) => {
-    try {
-      const { sale } = await salesAPI.create(saleData);
-      setSales(prev => [...prev, sale]);
-    } catch (error) {
-      console.error('Error adding sale:', error);
-      throw error;
-    }
-  };
-
   return (
     <AppContext.Provider
       value={{
@@ -157,11 +135,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addAttendee,
         updateAttendee,
         checkIn,
-        products,
-        sales,
-        addSale,
-        workshops,
-        events,
         refreshData,
         loading,
       }}

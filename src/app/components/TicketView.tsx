@@ -38,7 +38,7 @@ export function TicketView({ attendee, onClose }: TicketViewProps) {
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `Boleto-${attendee.fullName.replace(/\s+/g, '-')}-${attendee.qrCode}.png`;
+          link.download = `Boleto-${attendee.fullname.replace(/\s+/g, '-')}-${attendee.qrCode}.png`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -141,7 +141,7 @@ export function TicketView({ attendee, onClose }: TicketViewProps) {
             <div className="space-y-3">
               <div>
                 <p className="text-[#E9E2D0] opacity-80 text-sm">Nombre</p>
-                <p className="font-semibold text-lg text-[#E9E2D0]">{attendee.fullName}</p>
+                <p className="font-semibold text-lg text-[#E9E2D0]">{attendee.fullname}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
