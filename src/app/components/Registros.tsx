@@ -6,11 +6,32 @@ import * as XLSX from 'xlsx';
 
 export function Registros() {
   const { attendees, addAttendee } = useApp();
-  const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact');
+  const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAttendee, setSelectedAttendee] = useState<string | null>(null);
   const [showTicket, setShowTicket] = useState<string | null>(null);
+
+  const transformTicketType = // Helper function to transform ticket type values
+    (type: string) => {
+      switch (type) {
+        case 'descuento_1':
+          return 'Mayo - $300';
+        case 'descuento_2':
+          return 'Junio - $400';
+        case 'general':
+          return 'Agosto - $500';
+        default:
+          return type;
+      }
+    };
+
+   const filteredAttendees = attendees.filter(attendee =>
+    attendee.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    attendee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    attendee.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    attendee.church.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const [formData, setFormData] = useState({
     fullname: '',
@@ -55,8 +76,8 @@ export function Registros() {
       'Email': attendee.email,
       'Teléfono': attendee.phone,
       'Iglesia': attendee.church,
-      'Evento': attendee.eventName || attendee.eventId,
-      'Tipo de Boleto': attendee.ticketType.toUpperCase(),
+      'Evento': attendee.eventId === 'adoradores' ? 'Adoradores 2026' : attendee.eventName,
+      'Tipo de Boleto': transformTicketType(attendee.ticketType),
       'Estado de Pago': attendee.paymentStatus === 'pagado' ? 'PAGADO' : 'PENDIENTE',
       'Método de Pago': attendee.paymentMethod.charAt(0).toUpperCase() + attendee.paymentMethod.slice(1),
       'Check-in': attendee.checkedIn ? 'SÍ' : 'NO',
@@ -257,17 +278,6 @@ export function Registros() {
           {/* View Mode Toggles */}
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
             <button
-              onClick={() => setViewMode('compact')}
-              className={`p-2 rounded transition-colors ${
-                viewMode === 'compact'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-              title="Vista compacta"
-            >
-              <Grid3x3 className="w-4 h-4" />
-            </button>
-            <button
               onClick={() => setViewMode('detailed')}
               className={`p-2 rounded transition-colors ${
                 viewMode === 'detailed'
@@ -277,6 +287,17 @@ export function Registros() {
               title="Vista detallada"
             >
               <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('compact')}
+              className={`p-2 rounded transition-colors ${
+                viewMode === 'compact'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Vista compacta"
+            >
+              <Grid3x3 className="w-4 h-4" />
             </button>
           </div>
 
@@ -293,10 +314,23 @@ export function Registros() {
         </div>
       </div>
 
-      {/* Compact View */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por nombre, email o teléfono..."
+            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
       {viewMode === 'compact' ? (
+        /* Compact View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {attendees.map(attendee => (
+          {filteredAttendees.map(attendee => (
             <div
               key={attendee.id}
               onClick={() => setShowTicket(attendee.id)}
@@ -308,10 +342,10 @@ export function Registros() {
                   attendee.paymentStatus === 'pagado' ? 'bg-green-500' : 'bg-orange-500'
                 }`} />
               </div>
-              <p className="text-xs text-gray-600 mb-2 line-clamp-1">{attendee.email}</p>
+              <p className="text-xs text-gray-600 mb-2 line-clamp-1">{attendee.phone}</p>
               <div className="flex flex-wrap gap-1">
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                  {attendee.ticketType}
+                  {transformTicketType(attendee.ticketType)}
                 </span>
                 {attendee.checkedIn && (
                   <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
@@ -325,7 +359,7 @@ export function Registros() {
       ) : (
         /* Detailed View */
         <div className="space-y-3">
-          {attendees.map(attendee => (
+          {filteredAttendees.map(attendee => (
             <div
               key={attendee.id}
               className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
@@ -333,8 +367,8 @@ export function Registros() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{attendee.fullname}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{attendee.email}</p>
                   <p className="text-sm text-gray-600">{attendee.phone}</p>
+                  <p className="text-sm text-gray-600">{attendee.church}</p>
                   <div className="flex flex-wrap gap-2 mt-2">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       attendee.paymentStatus === 'pagado'
@@ -344,13 +378,11 @@ export function Registros() {
                       {attendee.paymentStatus === 'pagado' ? 'Pagado' : 'Pendiente'}
                     </span>
                     <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                      {attendee.ticketType.toUpperCase()}
+                      {transformTicketType(attendee.ticketType)}
                     </span>
-                    {attendee.eventName && (
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                        {attendee.eventName}
-                      </span>
-                    )}
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                      {attendee.eventId === 'adoradores' ? 'Adoradores 2026' : attendee.eventName}
+                    </span>
                     {attendee.checkedIn && (
                       <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
                         Check-in ✓
@@ -358,12 +390,6 @@ export function Registros() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowTicket(attendee.id)}
-                  className="ml-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                >
-                  <Edit2 className="w-5 h-5" />
-                </button>
               </div>
             </div>
           ))}
