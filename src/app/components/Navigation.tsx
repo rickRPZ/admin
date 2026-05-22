@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard,
   UserPlus,
-  Settings,
+  LogOut,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -14,9 +14,18 @@ import { useAuth } from '../contexts/AuthContext';
 export function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user , logout} = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
 
   const navItems = [
     {
@@ -213,6 +222,18 @@ export function Navigation() {
                 </button>
               );
             })}
+
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                handleLogout();
+                setIsMobileOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium text-sm">Cerrar Sesión</span>
+            </button>
           </div>
         </div>
       </nav>
