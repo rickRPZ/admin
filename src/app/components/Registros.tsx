@@ -3,6 +3,7 @@ import { Search, Plus, Edit2, X, FileDown, Grid3x3, List } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { TicketView } from './TicketView';
 import * as XLSX from 'xlsx';
+import * as atT from '../lib/attendeeTransforms';
 
 export function Registros() {
   const { attendees, addAttendee } = useApp();
@@ -12,21 +13,7 @@ export function Registros() {
   const [selectedAttendee, setSelectedAttendee] = useState<string | null>(null);
   const [showTicket, setShowTicket] = useState<string | null>(null);
 
-  const transformTicketType = // Helper function to transform ticket type values
-    (type: string) => {
-      switch (type) {
-        case 'descuento_1':
-          return 'Mayo - $300';
-        case 'descuento_2':
-          return 'Junio - $400';
-        case 'general':
-          return 'Agosto - $500';
-        default:
-          return type;
-      }
-    };
-
-   const filteredAttendees = attendees.filter(attendee =>
+  const filteredAttendees = attendees.filter(attendee =>
     attendee.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
     attendee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     attendee.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,6 +49,7 @@ export function Registros() {
         paymentMethod: 'efectivo',
         notes: '',
       });
+      setShowTicket(newAttendee.id);
     } catch (error) {
       console.error('Error creating attendee:', error);
       alert('Error al crear el registro');
@@ -76,14 +64,12 @@ export function Registros() {
       'Email': attendee.email,
       'Teléfono': attendee.phone,
       'Iglesia': attendee.church,
-      'Evento': attendee.eventId === 'adoradores' ? 'Adoradores 2026' : attendee.eventName,
-      'Tipo de Boleto': transformTicketType(attendee.ticketType),
-      'Estado de Pago': attendee.paymentStatus === 'pagado' ? 'PAGADO' : 'PENDIENTE',
+      'Evento': atT.transformEvent(attendee.eventId),
+      'Tipo de Boleto': atT.transformTicketType(attendee.ticketType),
+      'Estado de Pago': atT.transformPaymentStatus(attendee.paymentStatus),
       'Método de Pago': attendee.paymentMethod.charAt(0).toUpperCase() + attendee.paymentMethod.slice(1),
       'Check-in': attendee.checkedIn ? 'SÍ' : 'NO',
-      'Talleres': Array.isArray(attendee.workshops) && attendee.workshops.length > 0
-        ? attendee.workshops.join(', ')
-        : '',
+      'Talleres': atT.transformWorkshops(attendee.workshops),
       'Fecha de Registro': attendee.createdAt,
       'Usuario Registro': attendee.registryUser || '',
       'Notas': attendee.notes || '',
@@ -345,7 +331,7 @@ export function Registros() {
               <p className="text-xs text-gray-600 mb-2 line-clamp-1">{attendee.phone}</p>
               <div className="flex flex-wrap gap-1">
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                  {transformTicketType(attendee.ticketType)}
+                  {atT.transformTicketType(attendee.ticketType)}
                 </span>
                 {attendee.checkedIn && (
                   <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
@@ -362,6 +348,7 @@ export function Registros() {
           {filteredAttendees.map(attendee => (
             <div
               key={attendee.id}
+              onClick={() => setShowTicket(attendee.id)}
               className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
@@ -375,13 +362,13 @@ export function Registros() {
                         ? 'bg-green-100 text-green-700'
                         : 'bg-orange-100 text-orange-700'
                     }`}>
-                      {attendee.paymentStatus === 'pagado' ? 'Pagado' : 'Pendiente'}
+                      {atT.transformPaymentStatus(attendee.paymentStatus)}
                     </span>
                     <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                      {transformTicketType(attendee.ticketType)}
+                      {atT.transformTicketType(attendee.ticketType)}
                     </span>
                     <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                      {attendee.eventId === 'adoradores' ? 'Adoradores 2026' : attendee.eventName}
+                      {atT.transformEvent(attendee.eventId)}
                     </span>
                     {attendee.checkedIn && (
                       <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">

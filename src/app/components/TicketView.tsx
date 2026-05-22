@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Attendee } from '../contexts/AppContext';
 import { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
+import * as atT from '../lib/attendeeTransforms';
 
 interface TicketViewProps {
   attendee: Attendee;
@@ -14,7 +15,7 @@ function getTicketUrl(qrCode: string): string {
 }
 
 export function TicketView({ attendee, onClose }: TicketViewProps) {
-  const ticketUrl = getTicketUrl(attendee.qrCode);
+  const ticketUrl = getTicketUrl(attendee.id);
   const ticketRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -118,9 +119,9 @@ export function TicketView({ attendee, onClose }: TicketViewProps) {
           <div ref={ticketRef} className="bg-gradient-to-br from-[#3F0D18] to-[#012235] rounded-2xl p-6 text-white">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold mb-2" style={{ color: '#E9E2D0' }}>
-                {attendee.eventName || 'Evento'}
+                {atT.transformEvent(attendee.eventId)}
               </h3>
-              <p className="text-[#E9E2D0] opacity-80">Sistema de Eventos</p>
+              <p className="text-[#E9E2D0] opacity-80">Escuela de Adoradores</p>
             </div>
 
             <div className="bg-[#E9E2D0] rounded-xl p-4 mb-6">
@@ -151,26 +152,27 @@ export function TicketView({ attendee, onClose }: TicketViewProps) {
                 </div>
                 <div>
                   <p className="text-[#E9E2D0] opacity-80 text-sm">Tipo de Acceso</p>
-                  <p className="font-medium uppercase text-[#E9E2D0]">{attendee.ticketType}</p>
+                  <p className="font-medium uppercase text-[#E9E2D0]">General</p>
                 </div>
               </div>
 
               <div>
                 <p className="text-[#E9E2D0] opacity-80 text-sm">Fecha</p>
-                <p className="font-medium text-[#E9E2D0]">Viernes, 1 de Mayo 2026</p>
+                <p className="font-medium text-[#E9E2D0]">6 , 7 & 8 de Agosto 2026</p>
               </div>
 
               <div>
                 <p className="text-[#E9E2D0] opacity-80 text-sm mb-2">Talleres Registrados</p>
                 <div className="space-y-1">
-                  {attendee.workshops.map((workshop, index) => (
+                  {Array.isArray(attendee.workshops) && attendee.workshops.length > 0 
+                  ? attendee.workshops.map((workshop, index) => (
                     <div key={index} className="bg-[#E9E2D0] bg-opacity-20 px-3 py-2 rounded-lg text-sm text-[#E9E2D0]">
                       {workshop}
                     </div>
-                  ))}
-                  {attendee.workshops.length === 0 && (
+                  ))
+                  : 
                     <p className="text-[#E9E2D0] opacity-80 text-sm italic">Sin talleres asignados</p>
-                  )}
+                  }
                 </div>
               </div>
             </div>
