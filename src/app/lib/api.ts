@@ -58,6 +58,15 @@ export const attendeesAPI = {
   }),
 };
 
+export const paymentsAPI = {
+  getAll: () => fetchAPI('/payments'),
+  getByAttendee: (attendeeId: string) => fetchAPI(`/payments/attendee/${attendeeId}`),
+  create: (data: any) => fetchAPI('/payments', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+};
+
 // Sales API
 export const salesAPI = {
   getAll: () => fetchAPI('/sales'),

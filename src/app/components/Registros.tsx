@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import * as atT from '../lib/attendeeTransforms';
 
 export function Registros() {
-  const { attendees, addAttendee } = useApp();
+  const { attendees, addAttendee, addPayment } = useApp();
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,11 +32,31 @@ export function Registros() {
     notes: '',
   });
 
+  const getAmountFromTicketType = (ticketType: string) => {
+    switch (ticketType) {
+      case 'descuento_1':
+        return 300;
+      case 'descuento_2':
+        return 400;
+      case 'general':
+        return 500;
+      default:
+        return 0;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       const newAttendee = await addAttendee(formData);
+
+      await addPayment({
+        attendeeId: newAttendee.id,
+        paymentMethod: formData.paymentMethod,
+        amount: getAmountFromTicketType(formData.ticketType),
+      });
+
       setShowForm(false);
       setFormData({
         fullname: '',
@@ -51,7 +71,7 @@ export function Registros() {
       });
       setShowTicket(newAttendee.id);
     } catch (error) {
-      console.error('Error creating attendee:', error);
+      console.error('Error creating attendee or payment:', error);
       alert('Error al crear el registro');
     }
   };

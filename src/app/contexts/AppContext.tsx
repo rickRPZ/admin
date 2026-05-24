@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { attendeesAPI, salesAPI, productsAPI, workshopsAPI, eventsAPI } from '../lib/api';
+import { attendeesAPI, paymentsAPI, salesAPI, productsAPI, workshopsAPI, eventsAPI } from '../lib/api';
 import { useAuth } from './AuthContext';
 
 export interface Attendee {
@@ -46,11 +46,23 @@ export interface Sale {
   timestamp: string;
 }
 
+export interface Payment {
+  id: string;
+  attendeeId: string;
+  paymentMethod: 'efectivo' | 'transferencia' | string;
+  amount: number;
+  created_at: string;
+  registryUser: string;
+}
+
 interface AppContextType {
   attendees: Attendee[];
   addAttendee: (attendee: Omit<Attendee, 'id' | 'qrCode' | 'createdAt'>) => Promise<Attendee>;
   updateAttendee: (id: string, updates: Partial<Attendee>) => Promise<void>;
   checkIn: (qrCode: string) => Promise<boolean>;
+  payments: Payment[];
+  getPaymentsByAttendee: (attendeeId: string) => Promise<Payment[]>;
+  addPayment: (payment: Omit<Payment, 'id' | 'created_at' | 'registryUser'>) => Promise<Payment>;
   products: Product[];
   sales: Sale[];
   addSale: (sale: Omit<Sale, 'id' | 'timestamp'>) => Promise<void>;
@@ -65,6 +77,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
 
   const refreshData = async () => {
@@ -72,11 +85,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       setLoading(true);
-      const [attendeesData] = await Promise.all([
+      const [attendeesData, paymentsData] = await Promise.all([
         attendeesAPI.getAll(),
+        paymentsAPI.getAll(),
       ]);
 
       setAttendees(attendeesData.attendees || []);
+      setPayments(paymentsData.payments || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -98,6 +113,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error adding attendee:', error);
       throw error;
+    }
+  };
+
+  const addPayment = async (paymentData: Omit<Payment, 'id' | 'created_at' | 'registryUser'>) => {
+    try {
+      const { payment } = await paymentsAPI.create(paymentData);
+      setPayments(prev => [...prev, payment]);
+      return payment;
+    } catch (error) {
+      console.error('Error adding payment:', error);
+      throw error;
+    }
+  };
+
+  const getPaymentsByAttendee = async (attendeeId: string) => {
+    try {
+      const { payments } = await paymentsAPI.getByAttendee(attendeeId);
+      return payments || [];
+    } catch (error) {
+      console.error('Error fetching attendee payments:', error);
+      return [];
     }
   };
 
@@ -135,6 +171,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addAttendee,
         updateAttendee,
         checkIn,
+        payments,
+        getPaymentsByAttendee,
+        addPayment,
         refreshData,
         loading,
       }}

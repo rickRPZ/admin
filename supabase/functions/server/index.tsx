@@ -9,6 +9,7 @@ const FUNCTION_URI = "/admin_api";
 const HEALTH_URI = FUNCTION_URI + "/health";
 const SIGNUP_URI = FUNCTION_URI + "/auth/signup";
 const ATTENDEES_URI = FUNCTION_URI + "/attendees";
+const PAYMENTS_URI = FUNCTION_URI + "/payments";
 
 const app = new Hono();
 
@@ -124,7 +125,6 @@ app.post(ATTENDEES_URI, requireAuth, async (c) => {
       eventId: body.eventId ?? null,
       ticketType: body.ticketType ?? null,
       paymentStatus: body.paymentStatus ?? null,
-      paymentMethod: body.paymentMethod ?? null,
       registryUser,
     };
 
@@ -223,6 +223,95 @@ app.put(`${ATTENDEES_URI}/:id/qrcode`, requireAuth, async (c) => {
   } catch (error: any) {
     console.log('Attendee qrCode update exception:', error);
     return c.json({ error: 'Error updating attendee qrCode: ' + error.message }, 500);
+  }
+});
+
+// Payments endpoints
+app.get(PAYMENTS_URI, requireAuth, async (c) => {
+  try {
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const { data, error } = await serviceSupabase
+      .from('payments')
+      .select('*');
+
+    if (error) {
+      console.log('Fetch payments error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+
+    return c.json({ payments: data || [] });
+  } catch (error: any) {
+    console.log('Payments fetch exception:', error);
+    return c.json({ error: 'Error fetching payments: ' + error.message }, 500);
+  }
+});
+
+app.get(`${PAYMENTS_URI}/attendee/:attendeeId`, requireAuth, async (c) => {
+  try {
+    const attendeeId = c.req.param('attendeeId');
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const { data, error } = await serviceSupabase
+      .from('payments')
+      .select('*')
+      .eq('attendeeId', attendeeId);
+
+    if (error) {
+      console.log('Fetch attendee payments error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+
+    return c.json({ payments: data || [] });
+  } catch (error: any) {
+    console.log('Attendee payments fetch exception:', error);
+    return c.json({ error: 'Error fetching payments for attendee: ' + error.message }, 500);
+  }
+});
+
+app.post(PAYMENTS_URI, requireAuth, async (c) => {
+  try {
+    const body = await c.req.json();
+    const user = c.get('user');
+    const registryUser = user.email || user.id;
+
+    const amount = Number(body.amount);
+    if (!body.attendeeId || !body.paymentMethod || Number.isNaN(amount)) {
+      return c.json({ error: 'attendeeId, paymentMethod and valid amount are required' }, 400);
+    }
+
+    const record = {
+      attendeeId: body.attendeeId,
+      paymentMethod: body.paymentMethod,
+      amount,
+      registryUser,
+    };
+
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const { data, error } = await serviceSupabase
+      .from('payments')
+      .insert([record])
+      .select();
+
+    if (error) {
+      console.log('Insert payment error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+
+    return c.json({ payment: data?.[0] ?? null });
+  } catch (error: any) {
+    console.log('Payment create exception:', error);
+    return c.json({ error: 'Error creating payment: ' + error.message }, 500);
   }
 });
 
