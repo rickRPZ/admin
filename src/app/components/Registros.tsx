@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import * as atT from '../lib/attendeeTransforms';
 
 export function Registros() {
-  const { attendees, addAttendee, addPayment } = useApp();
+  const { attendees, payments, addAttendee, addPayment } = useApp();
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,6 +76,14 @@ export function Registros() {
     }
   };
 
+  const getLastPaymentMethod = (attendeeId: string) => {
+    const attendeePayments = payments
+      .filter(payment => payment.attendeeId === attendeeId)
+      .sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
+
+    return attendeePayments.length > 0 ? attendeePayments[0].paymentMethod : '';
+  };
+
   const exportToExcel = () => {
     // Prepare data for export
     const dataToExport = attendees.map((attendee, index) => ({
@@ -87,7 +95,7 @@ export function Registros() {
       'Evento': atT.transformEvent(attendee.eventId),
       'Tipo de Boleto': atT.transformTicketType(attendee.ticketType),
       'Estado de Pago': atT.transformPaymentStatus(attendee.paymentStatus),
-      'Método de Pago': attendee.paymentMethod.charAt(0).toUpperCase() + attendee.paymentMethod.slice(1),
+      'Método de Pago': getLastPaymentMethod(attendee.id),
       'Check-in': attendee.checkedIn ? 'SÍ' : 'NO',
       'Talleres': atT.transformWorkshops(attendee.workshops),
       'Fecha de Registro': attendee.createdAt,
