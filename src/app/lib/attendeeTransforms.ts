@@ -3,7 +3,11 @@ export const transformTicketType = (type: string) => {
     case 'descuento_1':
       return 'Mayo - $300';
     case 'descuento_2':
-      return 'Junio - $400';
+      return 'Junio - $350';
+    case 'descuento_servidores':
+      return 'Descuento Servidores';
+    case 'descuento_1_dia':
+      return 'Descuento 1 Día';
     case 'general':
       return 'Agosto - $500';
     default:

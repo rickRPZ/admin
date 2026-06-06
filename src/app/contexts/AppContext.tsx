@@ -9,7 +9,7 @@ export interface Attendee {
   email: string;
   eventId: string;
   eventName?: string;
-  ticketType: 'general' | 'descuento mayo' | 'descuento junio';
+  ticketType: 'general' | 'descuento_1' | 'descuento_2' | 'descuento_servidores' | 'descuento_1_dia';
   workshops: string[];
   paymentStatus: 'pagado' | 'pendiente';
   paymentMethod: 'efectivo' | 'transferencia';

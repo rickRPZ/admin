@@ -5,20 +5,31 @@ import { TicketView } from './TicketView';
 import * as XLSX from 'xlsx';
 import * as atT from '../lib/attendeeTransforms';
 
+type TicketType =
+  | 'general'
+  | 'descuento_1'
+  | 'descuento_2'
+  | 'descuento_servidores'
+  | 'descuento_1_dia';
+
 export function Registros() {
-  const { attendees, payments, addAttendee, addPayment } = useApp();
+  const { attendees, payments, addAttendee, addPayment} = useApp();
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAttendee, setSelectedAttendee] = useState<string | null>(null);
   const [showTicket, setShowTicket] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const filteredAttendees = attendees.filter(attendee =>
-    attendee.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    attendee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    attendee.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    attendee.church.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAttendees = attendees
+    .slice()
+    .sort((a, b) => b.id - a.id)
+    .filter(attendee =>
+      attendee.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      attendee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      attendee.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      attendee.church.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   const [formData, setFormData] = useState({
     fullname: '',
@@ -26,20 +37,24 @@ export function Registros() {
     email: '',
     church: '',
     eventId: 'adoradores' as 'adoradores',
-    ticketType: 'general' as 'general' | 'descuento_1' | 'descuento_2',
+    ticketType: 'descuento_2' as TicketType,
     paymentStatus: 'pendiente' as 'pendiente' | 'pagado',
     paymentMethod: 'efectivo' as 'efectivo' | 'transferencia',
     notes: '',
+    manualAmount: '',
   });
 
-  const getAmountFromTicketType = (ticketType: string) => {
+  const getAmountFromTicketType = (ticketType: TicketType) => {
     switch (ticketType) {
       case 'descuento_1':
         return 300;
       case 'descuento_2':
-        return 400;
+        return 350;
       case 'general':
         return 500;
+      case 'descuento_servidores':
+      case 'descuento_1_dia':
+        return 0;
       default:
         return 0;
     }
@@ -48,13 +63,25 @@ export function Registros() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const isManualTicket =
+      formData.ticketType === 'descuento_servidores' ||
+      formData.ticketType === 'descuento_1_dia';
+
+    const manualAmountValue = Number(formData.manualAmount);
+    if (isManualTicket && (!formData.manualAmount || Number.isNaN(manualAmountValue) || manualAmountValue <= 0)) {
+      alert('Ingresa un monto válido para el ticket seleccionado.');
+      return;
+    }
+
     try {
-      const newAttendee = await addAttendee(formData);
+      setLoading(true);
+      const { manualAmount, ...attendeePayload } = formData;
+      const newAttendee = await addAttendee(attendeePayload);
 
       await addPayment({
         attendeeId: newAttendee.id,
         paymentMethod: formData.paymentMethod,
-        amount: getAmountFromTicketType(formData.ticketType),
+        amount: isManualTicket ? manualAmountValue : getAmountFromTicketType(formData.ticketType),
       });
 
       setShowForm(false);
@@ -68,11 +95,14 @@ export function Registros() {
         paymentStatus: 'pendiente',
         paymentMethod: 'efectivo',
         notes: '',
+        manualAmount: '',
       });
       setShowTicket(newAttendee.id);
     } catch (error) {
       console.error('Error creating attendee or payment:', error);
       alert('Error al crear el registro');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -128,6 +158,17 @@ export function Registros() {
     // Download file
     XLSX.writeFile(wb, filename);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showTicket) {
     const attendee = attendees.find(a => a.id === showTicket);
@@ -224,14 +265,43 @@ export function Registros() {
             </label>
             <select
               value={formData.ticketType}
-              onChange={(e) => setFormData({ ...formData, ticketType: e.target.value as any })}
+              onChange={(e) => {
+                const ticketType = e.target.value as TicketType;
+                setFormData({
+                  ...formData,
+                  ticketType,
+                  manualAmount:
+                    ticketType === 'descuento_servidores' || ticketType === 'descuento_1_dia'
+                      ? formData.manualAmount
+                      : '',
+                });
+              }}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="descuento_1">Mayo - $300</option>
-              <option value="descuento_2">Junio - $400</option>
+              <option value="descuento_2">Junio - $350</option>
+              <option value="descuento_servidores">Servidores</option>
+              <option value="descuento_1_dia">1 Día</option>
               <option value="general">Agosto - $500</option>
             </select>
           </div>
+
+          {(formData.ticketType === 'descuento_servidores' || formData.ticketType === 'descuento_1_dia') && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Monto manual *
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.manualAmount}
+                onChange={(e) => setFormData({ ...formData, manualAmount: e.target.value })}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Ingresa el monto"
+                required
+              />
+            </div>
+          )}
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
