@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Edit2, X, FileDown, Grid3x3, List } from 'lucide-react';
+import { Search, Plus, Upload, FileSpreadsheet, X, FileDown, Grid3x3, List } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { TicketView } from './TicketView';
 import * as XLSX from 'xlsx';
@@ -20,6 +20,9 @@ export function Registros() {
   const [selectedAttendee, setSelectedAttendee] = useState<string | null>(null);
   const [showTicket, setShowTicket] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importResults, setImportResults] = useState<any>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const filteredAttendees = attendees
     .slice()
@@ -158,6 +161,257 @@ export function Registros() {
     // Download file
     XLSX.writeFile(wb, filename);
   };
+
+  const downloadTemplate = () => {
+    const templateData = [{
+      'Nombre Completo': 'Juan Pérez',
+      'Email': 'juan.perez@ejemplo.com',
+      'Teléfono': '5512345678',
+      'Iglesia': 'Iglesia Ejemplo',
+      'ID Evento': events.find(e => e.active)?.id || '',
+      'Tipo de Boleto': 'general',
+      'Estado de Pago': 'pendiente',
+      'Método de Pago': '',
+      'Talleres': '',
+      'Notas': '',
+    }];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+
+    // Add instructions sheet
+    const instructions = [
+      { Instrucción: 'INSTRUCCIONES PARA IMPORTACIÓN' },
+      { Instrucción: '' },
+      { Instrucción: '1. Complete todos los campos requeridos:' },
+      { Instrucción: '   - Nombre Completo (obligatorio)' },
+      { Instrucción: '   - Email (obligatorio, debe ser único)' },
+      { Instrucción: '   - Teléfono (obligatorio)' },
+      { Instrucción: '   - Iglesia (obligatorio)' },
+      { Instrucción: '   - ID Evento (obligatorio)' },
+      { Instrucción: '' },
+      { Instrucción: '2. Tipo de Boleto: general, vip, o estudiante' },
+      { Instrucción: '3. Estado de Pago: pendiente, parcial, o pagado' },
+      { Instrucción: '4. Método de Pago: efectivo, tarjeta, o transferencia (solo si estado no es pendiente)' },
+      { Instrucción: '5. Talleres: separe múltiples talleres con comas' },
+      { Instrucción: '' },
+      { Instrucción: `IDs de Eventos disponibles:` },
+      ...events.filter(e => e.active).map(e => ({ Instrucción: `   ${e.id} - ${e.name}` })),
+    ];
+
+    const wsInstructions = XLSX.utils.json_to_sheet(instructions);
+    XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instrucciones');
+
+    XLSX.writeFile(wb, 'Plantilla_Importacion_Registros.xlsx');
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setImportResults(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const data = event.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+          // Transform data to match attendee schema
+          const attendeesToImport = jsonData.map((row: any) => {
+            const workshops = row['Talleres']
+              ? row['Talleres'].split(',').map((w: string) => w.trim()).filter(Boolean)
+              : [];
+
+            return {
+              fullName: row['Nombre Completo'],
+              email: row['Email'],
+              phone: String(row['Teléfono']),
+              church: row['Iglesia'],
+              eventId: row['ID Evento'],
+              ticketType: (row['Tipo de Boleto'] || 'general').toLowerCase(),
+              workshops,
+              paymentStatus: (row['Estado de Pago'] || 'pendiente').toLowerCase(),
+              paymentMethod: row['Método de Pago'] ? row['Método de Pago'].toLowerCase() : undefined,
+              notes: row['Notas'] || '',
+              checkedIn: false,
+            };
+          });
+
+          // Validate required fields
+          const validAttendees = attendeesToImport.filter(a =>
+            a.fullName && a.email && a.phone && a.church && a.eventId
+          );
+
+          if (validAttendees.length === 0) {
+            throw new Error('No se encontraron registros válidos en el archivo');
+          }
+
+          // Send to backend
+          const result = await attendeesAPI.bulkCreate(validAttendees);
+          setImportResults(result);
+
+          // Refresh data
+          await refreshData();
+        } catch (error) {
+          console.error('Error processing file:', error);
+          alert('Error al procesar el archivo: ' + (error as Error).message);
+        } finally {
+          setIsImporting(false);
+        }
+      };
+
+      reader.readAsBinaryString(file);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      alert('Error al leer el archivo');
+      setIsImporting(false);
+    }
+
+    // Reset file input
+    e.target.value = '';
+  };
+
+  if (showImport) {
+    return (
+      <div className="p-4 md:p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Importar Registros</h1>
+            <button
+              onClick={() => {
+                setShowImport(false);
+                setImportResults(null);
+              }}
+              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {importResults ? (
+            <div className="space-y-4">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Resultados de Importación</h2>
+
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-blue-50 rounded-lg p-4 text-center">
+                    <p className="text-3xl font-bold text-blue-600">{importResults.total}</p>
+                    <p className="text-sm text-gray-600 mt-1">Total Procesados</p>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4 text-center">
+                    <p className="text-3xl font-bold text-green-600">{importResults.successCount}</p>
+                    <p className="text-sm text-gray-600 mt-1">Exitosos</p>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-4 text-center">
+                    <p className="text-3xl font-bold text-red-600">{importResults.errorCount}</p>
+                    <p className="text-sm text-gray-600 mt-1">Errores</p>
+                  </div>
+                </div>
+
+                {importResults.results.errors.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      Errores Encontrados
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {importResults.results.errors.map((error: any, index: number) => (
+                        <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                          <p className="text-sm font-medium text-red-900">Fila {error.row}</p>
+                          <p className="text-sm text-red-700">{error.error}</p>
+                          <p className="text-xs text-red-600 mt-1">
+                            {error.data.fullName || 'Sin nombre'} - {error.data.email || 'Sin email'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => {
+                      setShowImport(false);
+                      setImportResults(null);
+                    }}
+                    className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Finalizar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">Instrucciones</h3>
+                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                  <li>Descarga la plantilla de Excel para ver el formato requerido</li>
+                  <li>Completa todos los campos obligatorios (Nombre, Email, Teléfono, Iglesia, ID Evento)</li>
+                  <li>Los emails deben ser únicos para cada registro</li>
+                  <li>Guarda el archivo en formato .xlsx o .csv</li>
+                  <li>Sube el archivo usando el botón de abajo</li>
+                </ul>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">1. Descargar Plantilla</h2>
+                <button
+                  onClick={downloadTemplate}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
+                  <FileSpreadsheet className="w-5 h-5" />
+                  Descargar Plantilla Excel
+                </button>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">2. Cargar Archivo</h2>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleImportFile}
+                    disabled={isImporting}
+                    className="hidden"
+                    id="import-file"
+                  />
+                  <label
+                    htmlFor="import-file"
+                    className="flex flex-col items-center cursor-pointer"
+                  >
+                    <Upload className={`w-16 h-16 mb-4 ${isImporting ? 'text-gray-300' : 'text-blue-500'}`} />
+                    {isImporting ? (
+                      <div className="text-center">
+                        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                        <p className="text-gray-700 font-medium">Procesando archivo...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-gray-700 font-medium mb-1">
+                          Haz clic para seleccionar un archivo
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Formatos aceptados: .xlsx, .xls, .csv
+                        </p>
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -394,6 +648,16 @@ export function Registros() {
           >
             <FileDown className="w-4 h-4" />
             <span className="hidden sm:inline">Excel</span>
+          </button>
+
+          {/* Import Button */}
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+            title="Importar desde Excel"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">Importar</span>
           </button>
         </div>
       </div>
