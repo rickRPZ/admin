@@ -3,13 +3,17 @@ import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Dashboard() {
-  const { attendees } = useApp();
+  const { attendees, selectedEventId, setSelectedEventId } = useApp();
   const { user } = useAuth();
 
-  const totalRegistered = attendees.length;
-  const checkedIn = attendees.filter(a => a.checkedIn).length;
-  const paidAttendees = attendees.filter(a => a.paymentStatus === 'pagado').length;
-  const pendingPayments = attendees.filter(a => a.paymentStatus === 'pendiente').length;
+  const filteredAttendees = selectedEventId === 'all'
+    ? attendees
+    : attendees.filter(a => a.eventId === selectedEventId);
+    
+  const totalRegistered = filteredAttendees.length;
+  const checkedIn = filteredAttendees.filter(a => a.checkedIn).length;
+  const paidAttendees = filteredAttendees.filter(a => a.paymentStatus === 'pagado').length;
+  const pendingPayments = filteredAttendees.filter(a => a.paymentStatus === 'pendiente').length;
 
   const stats = [
     {

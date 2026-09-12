@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Upload, FileSpreadsheet, X, FileDown, Grid3x3, List } from 'lucide-react';
+import { Search, Plus, Upload, FileSpreadsheet, X, FileDown, Grid3x3, List , Filter} from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { TicketView } from './TicketView';
 import * as XLSX from 'xlsx';
@@ -7,13 +7,11 @@ import * as atT from '../lib/attendeeTransforms';
 
 type TicketType =
   | 'general'
-  | 'descuento_1'
-  | 'descuento_2'
   | 'descuento_servidores'
   | 'descuento_1_dia';
 
 export function Registros() {
-  const { attendees, payments, addAttendee, addPayment} = useApp();
+  const { attendees, addAttendee, events, selectedEventId, setSelectedEventId, refreshData, addPayment } = useApp();
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,20 +25,23 @@ export function Registros() {
   const filteredAttendees = attendees
     .slice()
     .sort((a, b) => b.id - a.id)
-    .filter(attendee =>
+    .filter(attendee => {
+      const matchesSearchTerm =
       attendee.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
       attendee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       attendee.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      attendee.church.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+      attendee.church.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesEventTerm = selectedEventId === 'all' || attendee.eventId === selectedEventId;
+      return matchesSearchTerm && matchesEventTerm;
+    });
 
   const [formData, setFormData] = useState({
     fullname: '',
     phone: '',
     email: '',
     church: '',
-    eventId: 'adoradores' as 'adoradores',
-    ticketType: 'descuento_2' as TicketType,
+    eventId: 'intercesion' as 'adoradores' | 'intercesion',
+    ticketType: 'general' as TicketType,
     paymentStatus: 'pendiente' as 'pendiente' | 'pagado',
     paymentMethod: 'efectivo' as 'efectivo' | 'transferencia',
     notes: '',
@@ -84,7 +85,7 @@ export function Registros() {
       await addPayment({
         attendeeId: newAttendee.id,
         paymentMethod: formData.paymentMethod,
-        amount: isManualTicket ? manualAmountValue : getAmountFromTicketType(formData.ticketType),
+        amount: manualAmountValue,
       });
 
       setShowForm(false);
@@ -93,14 +94,14 @@ export function Registros() {
         phone: '',
         email: '',
         church: '',
-        eventId: 'adoradores',
+        eventId: 'intercesion',
         ticketType: 'general',
         paymentStatus: 'pendiente',
         paymentMethod: 'efectivo',
         notes: '',
         manualAmount: '',
       });
-      setShowTicket(newAttendee.id);
+      //setShowTicket(newAttendee.id);
     } catch (error) {
       console.error('Error creating attendee or payment:', error);
       alert('Error al crear el registro');
@@ -165,10 +166,9 @@ export function Registros() {
   const downloadTemplate = () => {
     const templateData = [{
       'Nombre Completo': 'Juan Pérez',
-      'Email': 'juan.perez@ejemplo.com',
+      'Email': '',
       'Teléfono': '5512345678',
-      'Iglesia': 'Iglesia Ejemplo',
-      'ID Evento': events.find(e => e.active)?.id || '',
+      'Iglesia': 'CFN',
       'Tipo de Boleto': 'general',
       'Estado de Pago': 'pendiente',
       'Método de Pago': '',
@@ -186,10 +186,10 @@ export function Registros() {
       { Instrucción: '' },
       { Instrucción: '1. Complete todos los campos requeridos:' },
       { Instrucción: '   - Nombre Completo (obligatorio)' },
-      { Instrucción: '   - Email (obligatorio, debe ser único)' },
       { Instrucción: '   - Teléfono (obligatorio)' },
       { Instrucción: '   - Iglesia (obligatorio)' },
-      { Instrucción: '   - ID Evento (obligatorio)' },
+      { Instrucción: '   - Metodo Pago (obligatorio)' },
+      { Instrucción: '   - Monto (obligatorio)' },
       { Instrucción: '' },
       { Instrucción: '2. Tipo de Boleto: general, vip, o estudiante' },
       { Instrucción: '3. Estado de Pago: pendiente, parcial, o pagado' },
@@ -461,27 +461,25 @@ export function Registros() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Teléfono *
+                Teléfono
               </label>
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email *
+                Email
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
               />
             </div>
           </div>
@@ -501,7 +499,7 @@ export function Registros() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Evento *
+              Evento
             </label>
             <select
               value={formData.eventId}
@@ -509,7 +507,7 @@ export function Registros() {
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
-              <option value="adoradores">Adoradores</option>
+              <option value="intercesion">Intercesión</option>
             </select>
           </div>
 
@@ -525,22 +523,20 @@ export function Registros() {
                   ...formData,
                   ticketType,
                   manualAmount:
-                    ticketType === 'descuento_servidores' || ticketType === 'descuento_1_dia'
+                    ticketType === 'descuento_servidores' || ticketType === 'descuento_1_dia' || ticketType === 'general'
                       ? formData.manualAmount
                       : '',
                 });
               }}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="descuento_1">Mayo - $300</option>
-              <option value="descuento_2">Junio - $350</option>
               <option value="descuento_servidores">Servidores</option>
               <option value="descuento_1_dia">1 Día</option>
-              <option value="general">Agosto - $500</option>
+              <option value="general">General</option>
             </select>
           </div>
 
-          {(formData.ticketType === 'descuento_servidores' || formData.ticketType === 'descuento_1_dia') && (
+          {(formData.ticketType === 'descuento_servidores' || formData.ticketType === 'descuento_1_dia' || formData.ticketType === 'general') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Monto manual *
@@ -650,7 +646,7 @@ export function Registros() {
             <span className="hidden sm:inline">Excel</span>
           </button>
 
-          {/* Import Button */}
+          {/* Import Button 
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
@@ -658,7 +654,7 @@ export function Registros() {
           >
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">Importar</span>
-          </button>
+          </button>*/}
         </div>
       </div>
 
@@ -673,6 +669,17 @@ export function Registros() {
             className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
+
+        {/*<div className="relative">
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+          <select
+            value={selectedEventId}
+            onChange={(e) => setSelectedEventId(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none"
+          >
+            <option value="intercesion">Intercesión</option>
+          </select>
+        </div>*/}
       </div>
 
       {viewMode === 'compact' ? (

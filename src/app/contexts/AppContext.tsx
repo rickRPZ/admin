@@ -70,6 +70,7 @@ interface AppContextType {
   events: Event[];
   refreshData: () => Promise<void>;
   loading: boolean;
+  setSelectedEventId: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -79,6 +80,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string>('all');
 
   const refreshData = async () => {
     if (!isAuthenticated) return;
@@ -92,6 +94,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setAttendees(attendeesData.attendees || []);
       setPayments(paymentsData.payments || []);
+      setSelectedEventId('intercesion'); // Set default event to 'intercesion'
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -176,6 +179,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addPayment,
         refreshData,
         loading,
+        selectedEventId,
+        setSelectedEventId,
       }}
     >
       {children}
